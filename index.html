@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Time &amp; Memory</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Unbounded:wght@900&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--bg:#000;--card:#141414;--ink:#f2f0e6;--q:#c9c9c9;--dim:#8d8d8d;--hot:#ff1a0a;--heart:#d1313f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root[data-mood="golden"]{--bg:#0a0502;--card:#1b120a;--ink:#f6e3c0;--q:#e3cba4;--dim:#a58a66;--hot:#ffb347;--heart:#ff8a3d}
+:root[data-mood="golden"] .pic svg{filter:sepia(1) saturate(2.2) brightness(1.05)}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden;transition:background .6s}
+#stage{position:relative;width:100%;height:100%}
+.scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px 16px 84px;box-sizing:border-box}
+.card{width:min(560px,100%);background:var(--card);border-radius:14px;padding:18px 18px 12px;animation:cin .7s ease both}
+@keyframes cin{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.who{display:flex;gap:10px;align-items:center}
+.av{width:38px;height:38px;border-radius:50%;flex:none}
+.name{font-size:13px;color:var(--dim);font-weight:600}
+.q{font-size:clamp(17px,4.6vw,22px);line-height:1.35;color:var(--q);margin:8px 0 12px}
+.pic{width:min(46%,210px);aspect-ratio:1;border-radius:6px;overflow:hidden;background:#050505}
+.pic svg{width:100%;height:100%;display:block;animation:drift 5.6s linear both}
+@keyframes drift{from{transform:scale(1)}to{transform:scale(1.14) translateX(-3%)}}
+.foot{display:flex;align-items:center;gap:14px;color:var(--dim);font-size:13px;margin-top:10px}
+.foot .sp{flex:1}
+.likes{color:var(--heart);display:flex;gap:6px;font-variant-numeric:tabular-nums}
+.tag{display:inline-block;margin-top:10px;background:#262626;border-radius:4px;padding:3px 8px;font-size:12px}
+.w{font-size:clamp(64px,22vw,190px);line-height:1;text-align:center;animation:slam .35s cubic-bezier(.2,.9,.2,1) both;user-select:none}
+@keyframes slam{from{opacity:0;transform:scale(1.35);filter:blur(10px)}to{opacity:1;transform:none;filter:none}}
+.heavy{font-family:Anton,Impact,"Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.04em}
+.wide{font-family:Unbounded,"Arial Black",Impact,sans-serif;font-weight:900;font-size:clamp(48px,15vw,140px)}
+.hand{font-family:"Nanum Pen Script","Bradley Hand","Segoe Print",cursive;font-size:clamp(90px,30vw,260px)}
+.hot{color:var(--hot)}
+.flick{animation:slam .35s both,fl .5s steps(1) .35s 3}
+@keyframes fl{50%{opacity:.15}}
+.idle{text-align:center;color:var(--dim);font-size:15px;line-height:1.6}
+.idle .w{color:var(--ink);font-size:clamp(40px,13vw,110px);margin-bottom:10px;animation:none}
+#ui{position:fixed;left:0;right:0;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:0 12px;z-index:5}
+button{background:#1c1c1c;color:#eee;border:1px solid #333;border-radius:999px;padding:9px 16px;font:inherit;font-size:14px}
+button[aria-pressed="true"]{background:#eee;color:#111}
+button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#bar{position:fixed;left:0;top:0;height:2px;background:var(--ink);width:0;z-index:5;opacity:.5}
+@media (prefers-reduced-motion:reduce){.pic svg,.card,.w{animation:none!important}}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div id="stage"></div>
+<div id="ui">
+<button id="mH" aria-pressed="true">Haunted</button>
+<button id="mG" aria-pressed="false">Golden</button>
+<button id="snd" aria-pressed="true">Sound on</button>
+<button id="go">Play</button>
+</div>
+<script>
+const S=b=>'<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="g" cx=".5" cy=".4" r=".7"><stop offset="0" stop-color="#ddd"/><stop offset="1" stop-color="#050505"/></radialGradient><filter id="f"><feTurbulence baseFrequency=".9" numOctaves="2"/><feColorMatrix values="0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .12 0"/></filter></defs><rect width="100" height="100" fill="#0a0a0a"/>'+b+'<rect width="100" height="100" filter="url(#f)"/></svg>';
+const PICS={
+fog:S('<rect width="100" height="100" fill="url(#g)" opacity=".55"/><circle cx="52" cy="46" r="26" fill="none" stroke="#fff" stroke-width="1.5" opacity=".7"/><path d="M52 46V30M52 46l12 6" stroke="#fff" stroke-width="2" opacity=".8"/><path d="M0 78C20 62 40 90 60 74S90 66 100 76V100H0Z" fill="#000" opacity=".7"/>'),
+glass:S('<path d="M30 12H70L52 50L70 88H30L48 50Z" fill="none" stroke="#e8e8e8" stroke-width="2"/><path d="M36 84H64L52 66H48Z" fill="#e8e8e8"/><path d="M38 17H62L50 40Z" fill="#e8e8e8" opacity=".25"/><line x1="50" y1="48" x2="50" y2="66" stroke="#e8e8e8"/>'),
+rows:S([0,1,2,3].map(i=>[0,1,2,3].map(j=>'<g opacity="'+(1-(i+j)*.13).toFixed(2)+'"><circle cx="'+(16+j*23)+'" cy="'+(16+i*23)+'" r="9" fill="none" stroke="#fff" stroke-width="1.2"/><path d="M'+(16+j*23)+' '+(16+i*23)+'v-6M'+(16+j*23)+' '+(16+i*23)+'l'+(2+i*2)+' 4" stroke="#fff"/></g>').join('')).join('')),
+walk:S('<rect width="100" height="100" fill="url(#g)" opacity=".4"/><g fill="#000"><circle cx="30" cy="38" r="5"/><path d="M24 44h12l3 28h-18Z"/><circle cx="70" cy="40" r="5"/><path d="M63 46h14l2 26h-18Z"/></g><g fill="#fff" opacity=".3"><circle cx="50" cy="50" r="4"/><path d="M46 55h8l2 24h-12Z"/></g><rect y="80" width="100" height="20" fill="#000"/>'),
+door:S('<rect x="28" y="14" width="44" height="76" fill="#111" stroke="#bbb" stroke-width="1.5"/><path d="M60 14h12v76H60Z" fill="#fff" opacity=".85"/><path d="M60 90L100 100V70Z" fill="#fff" opacity=".18"/><circle cx="36" cy="54" r="2" fill="#bbb"/>'),
+film:S([0,1,2].map(i=>'<rect x="'+(8+i*30)+'" y="26" width="26" height="48" fill="#222" stroke="#ccc"/><rect x="'+(8+i*30)+'" y="26" width="26" height="48" fill="#fff" opacity="'+(.7-i*.28)+'"/>'+[0,1,2,3].map(k=>'<rect x="'+(11+i*30)+'" y="'+(10+k*0)+'" width="0" height="0"/>').join('')).join('')+'<path d="M0 18h100M0 82h100" stroke="#ccc" stroke-dasharray="3 3"/>')
+};
+const AV=['#555','#3a4a5a','#5a4a3a','#4a4a4a','#4f4f58','#5a5048'];
+const D=['4d','2d','11-7','1w','5d','3h'];
+const card=(n,i,q,p,l,tag)=>'<div class="card"><div class="who"><div class="av" style="background:radial-gradient(circle at 40% 35%,#ddd,'+AV[i]+' 60%,#111)"></div><div class="name">'+n+'</div></div><div class="q">'+q+'</div><div class="pic">'+PICS[p]+'</div>'+(tag?'<div class="tag">First comment</div>':'')+'<div class="foot"><span>'+D[i]+'</span><b>Reply</b><span class="sp"></span><span class="likes">♥ <span data-n="'+l+'">0</span></span><span>👎</span></div></div>';
+const w=(t,c)=>'<div class="w '+c+'">'+t+'</div>';
+const M={
+haunted:{drone:[55,82.4,110.5],type:'sawtooth',lp:260,
+ cards:[['Hourkeeper','“If a moment is gone, then why does it still weigh so much?”','fog',453],['SandTheory','No photograph was ever taken of the minute you actually needed.','glass',14,1],['OrionMemory','An old clock will teach you many things.','rows',146],['Maya_late','We keep the shadows of people long after we lose their faces.','walk',2307],['NightShiftNora','Somewhere a door is still open in a house that was sold years ago.','door',981],['Reel_Ghost','You don’t forget. You just stop being able to rewind.','film',6120]],
+ mid:[['THEN','heavy'],['YOU','wide'],['NOW','hand'],['WAIT','heavy'],['LATE','wide']],
+ fin:[['GONE','heavy hot'],['GONE','heavy hot flick'],['STILL','hand'],['HERE','wide']]},
+golden:{drone:[110,165,220,277.2],type:'sine',lp:900,
+ cards:[['Hourkeeper','“If a moment is gone, why does it still warm me?”','fog',453],['SandTheory','Every grain that falls was somebody’s afternoon.','glass',14,1],['OrionMemory','A drawer of old clocks is a drawer of good days.','rows',146],['Maya_late','Walk slower. The people beside you are the photograph.','walk',2307],['PorchLightPaul','Somewhere a porch light is still on for you.','door',981],['Reel_Sunday','You don’t lose memories. You carry them forward.','film',6120]],
+ mid:[['BACK','heavy'],['YOU','wide'],['NOW','hand'],['STAY','heavy'],['AGAIN','wide']],
+ fin:[['HOLD','heavy hot'],['HOLD','heavy hot flick'],['STILL','hand'],['HERE','wide']]}
+};
+const DEF={haunted:{bpm:130,card:3,slam:1,fin:[1,2,2,2]},golden:{bpm:88,card:2,slam:1,fin:[1,2,2,2]}};
+function build(m,def,barMs){const a=[];let sb=0;const add=(bars,h,s)=>{a.push({bars,h,s,sb,at:sb*barMs,d:bars*barMs});sb+=bars};
+ m.cards.forEach((c,i)=>{add(def.card,card(c[0],i,c[1],c[2],c[3],c[4]),'card');if(i<5)add(def.slam,w(...m.mid[i]),'slam')});
+ const f=m.fin,fb=def.fin;add(fb[0],w(...f[0]),'gone');add(fb[1],w(...f[1]),'flick');add(fb[2],w(...f[2]),'resume');add(fb[3],w(...f[3]),'end');add(0,null,'done');return a}
+// ---------- music engine: original tracks, beat-synced to the cuts ----------
+let AC,master,muteG,bus,sh,dl,dG,noiseBuf,nodes=[],sched,EB=[],muted=false,mood='haunted';
+const mtof=n=>440*Math.pow(2,(n-69)/12);
+function O(type,f0,f1,t,v,dur,dest,att,gl){att=att||.003;const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.setValueAtTime(f0,t);if(f1!==f0)o.frequency.exponentialRampToValueAtTime(f1,t+(gl||dur*.6));g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(v,t+att);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(dest||bus);o.start(t);o.stop(t+dur+.05)}
+function N(f,q,v,t,dur,type){const s=AC.createBufferSource(),fl=AC.createBiquadFilter(),g=AC.createGain();s.buffer=noiseBuf;fl.type=type||'bandpass';fl.frequency.value=f;fl.Q.value=q;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);s.connect(fl);fl.connect(g);g.connect(bus);s.start(t);s.stop(t+dur+.05)}
+function riser(t,dur,v){const s=AC.createBufferSource(),fl=AC.createBiquadFilter(),g=AC.createGain();s.buffer=noiseBuf;s.loop=true;fl.type='highpass';fl.frequency.setValueAtTime(400,t);fl.frequency.exponentialRampToValueAtTime(9000,t+dur);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(v||.22,t+dur);g.gain.linearRampToValueAtTime(0,t+dur+.03);s.connect(fl);fl.connect(g);g.connect(bus);s.start(t);s.stop(t+dur+.1)}
+const kick=(t,v)=>{O('sine',150,45,t,v,.45,bus,.002,.1);N(3500,1,.12*v,t,.02,'highpass')};
+const snare=(t,v)=>{N(1900,.8,v*.8,t,.2);O('triangle',210,150,t,v*.4,.12)};
+const hat=(t,v)=>N(9000,.7,v*.5,t,.04,'highpass');
+const bass=(t,f,len,v)=>O('sine',f*1.7,f,t,v,len,sh,.004,.06);
+function cow(t,n,v){const k=Math.pow(2,n/12);[540,800].forEach(f=>{const o=AC.createOscillator(),b=AC.createBiquadFilter(),g=AC.createGain();o.type='square';o.frequency.value=f*k;b.type='bandpass';b.frequency.value=800*k;b.Q.value=1.1;g.gain.setValueAtTime(v*.5,t);g.gain.exponentialRampToValueAtTime(.001,t+.3);o.connect(b);b.connect(g);g.connect(bus);o.start(t);o.stop(t+.32)})}
+function ep(t,f,dur){O('sine',f,f,t,.07,dur,bus,.01);O('sine',f*2,f*2,t,.025,dur*.5,bus,.01)}
+function pluck(t,n,v){const f=mtof(n);O('triangle',f,f,t,v,.9,bus,.004);O('triangle',f,f,t,v*.8,.9,dl,.004)}
+function heart(t){O('sine',70,36,t,.9,.35,sh,.003,.12)}
+function impact(t,big){if(mood==='haunted'){O('sine',110,28,t,1,1.6,sh,.003,.6);N(6000,.5,big?.5:.35,t,1.4,'highpass');N(500,.5,.6,t,.4,'lowpass')}
+ else{O('sine',100,45,t,.6,1.3,bus,.004,.4);[76,83,88].forEach((n,i)=>{const f=mtof(n);O('sine',f,f,t+.08*i,.1,2.6,bus,.01);O('sine',f,f,t+.08*i,.08,2.6,dl,.01)})}}
+function tail(t,bs){if(mood==='haunted')bass(t,43.65,bs*1.8,1);else{[53,57,60,64].forEach(n=>ep(t,mtof(n),bs*1.8));pluck(t+.2,88,.12)}}
+const BN=[29,29,25,27],MEL=[{0:0,3:3,6:5,8:7,10:5,12:3,14:0},{0:0,3:-2,6:0,8:3,10:2,12:0}];
+function gH(b,s,t,sd,intro,pre){
+ const K=b%2?[0,6,10,12]:[0,7,10];
+ if(!intro){if(K.includes(s))kick(t,.95);if(s===4||(s===12&&!pre))snare(t,.55);const bl={0:6,7:3,10:4}[s];if(bl)bass(t,mtof(BN[b%4]),bl*sd,.9)}
+ if(s%2===0)hat(t,.28);else if(!pre||s<11)hat(t,.1);
+ if(pre&&s>=12)hat(t,.2);
+ const m=MEL[b%2][s];if(m!==undefined&&!(pre&&s>=14))cow(t,m,.2);
+ if(pre){if(s===8)riser(t,sd*8);if(s>=8&&(s>=12||s%2===0))snare(t,.1+(s-8)*.06)}}
+const CH=[[57,60,64,67],[53,57,60,64],[48,55,59,64],[55,59,62,65]],GB=[33,29,36,31],GM=[{0:76,6:72,10:79},{0:77,6:76,10:72},{0:79,6:76,8:72},{0:74,6:71,10:67}];
+function gG(b,s,t,sd,intro,pre){const c=b%4;
+ if(s===0||s===10)CH[c].forEach(n=>ep(t,mtof(n),(s?6:10)*sd));
+ if(!intro){if(s===0||s===10)kick(t,.7);if(s===4||s===12)N(2400,1,.22,t,.14);if(s===0||s===10)O('sine',mtof(GB[c]),mtof(GB[c]),t,.5,(s?4:8)*sd,bus,.01)}
+ hat(t,s%2?.05:.12);
+ const m=GM[c][s];if(m!==undefined)pluck(t,m,.12);
+ if(Math.random()<.12)N(5000,1,.05,t,.01,'highpass');
+ if(pre&&s===8)riser(t,sd*8,.12)}
+function step(i,b,s,t,sd){const e=EB[b];if(!e)return;const bi=b-e.sb,first=s===0&&bi===0,nx=EB[b+1],bs=sd*16;
+ const pre=e.s==='card'&&bi===e.bars-1&&nx&&(nx.s==='slam'||nx.s==='gone');
+ if(first&&e.s!=='card'&&e.s!=='flick')impact(t,e.s==='gone'||e.s==='end');
+ if(first&&e.s==='gone'&&dG)dG.gain.setTargetAtTime(.004,t,.08);
+ if(first&&e.s==='resume'&&dG)dG.gain.setTargetAtTime(.06,t,.5);
+ if(e.s==='flick'){if(s===0||s===3)heart(t);return}
+ if(e.s==='gone')return;
+ if(e.s==='end'){if(first){tail(t,bs);master.gain.setValueAtTime(1,t+bs*.5);master.gain.linearRampToValueAtTime(0,t+bs*1.9)}return}
+ const intro=e.sb===0&&bi===0;mood==='haunted'?gH(b,s,t,sd,intro,pre):gG(b,s,t,sd,intro,pre)}
+function startAudio(tl,bpm){
+ AC=AC||new(window.AudioContext||window.webkitAudioContext)();AC.resume();
+ if(!noiseBuf){noiseBuf=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+ const cp=AC.createDynamicsCompressor();cp.threshold.value=-14;cp.ratio.value=4;
+ muteG=AC.createGain();muteG.gain.value=muted?0:1;master=AC.createGain();master.connect(muteG);muteG.connect(cp);cp.connect(AC.destination);
+ bus=AC.createGain();bus.gain.value=.9;bus.connect(master);
+ const rv=AC.createConvolver(),n=AC.sampleRate*2.2,ib=AC.createBuffer(2,n,AC.sampleRate);
+ for(let c=0;c<2;c++){const x=ib.getChannelData(c);for(let i=0;i<n;i++)x[i]=(Math.random()*2-1)*Math.pow(1-i/n,2.4)}
+ rv.buffer=ib;const wet=AC.createGain();wet.gain.value=mood==='haunted'?.25:.35;bus.connect(rv);rv.connect(wet);wet.connect(master);
+ sh=AC.createWaveShaper();const cu=new Float32Array(1024);for(let i=0;i<1024;i++)cu[i]=Math.tanh((i/512-1)*3);sh.curve=cu;sh.connect(bus);
+ dl=AC.createGain();const dd=AC.createDelay(2),fb=AC.createGain(),lp=AC.createBiquadFilter();dd.delayTime.value=60/bpm*.75;fb.gain.value=.38;lp.frequency.value=2200;dl.connect(dd);dd.connect(lp);lp.connect(fb);fb.connect(dd);lp.connect(bus);
+ dG=null;
+ if(mood==='haunted'){dG=AC.createGain();dG.gain.value=.0001;dG.gain.setTargetAtTime(.05,AC.currentTime,1.5);dG.connect(bus);
+  [43.65,65.4,87.3].forEach(f=>[-7,7].forEach(dt=>{const o=AC.createOscillator(),fl=AC.createBiquadFilter();o.type='sawtooth';o.frequency.value=f*2;o.detune.value=dt;fl.type='lowpass';fl.frequency.value=380;o.connect(fl);fl.connect(dG);o.start();nodes.push(o)}))}
+ else{const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=noiseBuf;s.loop=true;f.type='highpass';f.frequency.value=4000;g.gain.value=.012;s.connect(f);f.connect(g);g.connect(bus);s.start();nodes.push(s)}
+ EB=[];let total=0;tl.forEach(e=>{for(let k=0;k<e.bars;k++)EB[e.sb+k]=e;total=e.sb+e.bars});
+ const sd=60/bpm/4,t0=AC.currentTime+.15;let i=0;
+ sched=setInterval(()=>{for(;;){const b=Math.floor(i/16);if(b>=total){clearInterval(sched);return}
+  const t=t0+i*sd+((mood==='golden'&&i%2)?sd*.16:0);if(t>AC.currentTime+.3)break;step(i,b,i%16,t,sd);i++}},40)}
+function audioStop(){clearInterval(sched);nodes.forEach(o=>{try{o.stop()}catch(e){}});nodes=[];if(master){try{master.disconnect()}catch(e){}}}
+// ---------- playback ----------
+const st=document.getElementById('stage'),bar=document.getElementById('bar'),go=document.getElementById('go'),root=document.documentElement;
+let timers=[],raf,total=1;
+function show(h){st.innerHTML=h?'<div class="scene">'+h+'</div>':'';
+ st.querySelectorAll('[data-n]').forEach(el=>{const n=+el.dataset.n,s=performance.now();(function f(){const p=Math.min(1,(performance.now()-s)/1800);el.textContent=Math.round(n*(1-Math.pow(1-p,3))).toLocaleString();if(p<1)requestAnimationFrame(f)})()})}
+function idle(){st.innerHTML='<div class="scene"><div class="idle"><div class="w heavy">Time &amp; Memory</div>Tap play. Turn your sound up.<br>Haunted is a phonk-style beat. Golden is lo-fi.</div></div>';bar.style.width='0'}
+function stop(){timers.forEach(clearTimeout);timers=[];cancelAnimationFrame(raf);audioStop()}
+function play(){stop();root.dataset.mood=mood;go.textContent='Restart';
+ const def=DEF[mood],barMs=240000/def.bpm,tl=build(M[mood],def,barMs);total=tl.reduce((a,e)=>a+e.d,0);startAudio(tl,def.bpm);
+ const t0=performance.now()+150;
+ tl.forEach(e=>timers.push(setTimeout(()=>{show(e.h);if(e.s==='done'){go.textContent='Replay';cancelAnimationFrame(raf);bar.style.width='100%';audioStop()}},150+e.at)));
+ (function tick(){bar.style.width=Math.max(0,Math.min(100,(performance.now()-t0)/total*100))+'%';raf=requestAnimationFrame(tick)})()}
+function setMood(m){mood=m;root.dataset.mood=m;mH.setAttribute('aria-pressed',m==='haunted');mG.setAttribute('aria-pressed',m==='golden');play()}
+const mH=document.getElementById('mH'),mG=document.getElementById('mG'),sb=document.getElementById('snd');
+mH.onclick=()=>setMood('haunted');mG.onclick=()=>setMood('golden');go.onclick=play;
+sb.onclick=()=>{muted=!muted;sb.setAttribute('aria-pressed',!muted);sb.textContent=muted?'Sound off':'Sound on';if(muteG)muteG.gain.value=muted?0:1};
+idle();
+</script>
+</body>
+</html>
